@@ -1,0 +1,128 @@
+plugins {
+    id 'java'
+    alias libs.plugins.mdg apply false
+    alias libs.plugins.lombok apply false
+    id 'org.jreleaser' version '1.23.0' apply false
+    id "me.modmuss50.mod-publish-plugin" version "1.1.0" apply false
+}
+
+group = mod_group_id
+version = mod_version
+
+repositories {
+    mavenCentral()
+}
+
+tasks.register("createModule") {
+    if (!project.hasProperty('id')) {
+        throw new GradleException("Id property is required. Use -Pid=<id> to specify the version.")
+    }
+    String id = project.property("id")
+    if (id.matches("[A-Z]+")) {
+        throw new GradleException("Id cannot be all uppercase.")
+    }
+    String underlinedId = id.replace('-', '_')
+    String mod_id = "qualialib_$underlinedId"
+    String bigHumpName = id.split('-').collect { it.substring(0, 1).toUpperCase() + it.substring(1) }.join()
+    String mod_name = "QualiaLib-$bigHumpName"
+    String class_name = "QualiaLib$bigHumpName"
+    File buildGradle = file("module.$id/build.gradle")
+    File gradleProperties = file("module.$id/gradle.properties")
+    File mainClass = file("module.$id/src/main/java/com/qiushui1012/lib/$underlinedId/${class_name}.java")
+    File packageInfo = file("module.$id/src/main/java/com/qiushui1012/lib/$underlinedId/package-info.java")
+    File modInfoPath = file("module.$id/src/main/resources/META-INF/")
+    File mixinConfig = file("module.$id/src/main/resources/${mod_id}.mixins.json")
+    buildGradle.parentFile.mkdirs()
+    mainClass.parentFile.mkdirs()
+    modInfoPath.mkdirs()
+    buildGradle.createNewFile()
+    gradleProperties.createNewFile()
+    mainClass.createNewFile()
+    mixinConfig.createNewFile()
+    copy {
+        from file("module.main/src/main/resources/META-INF/neoforge.mods.toml")
+        into modInfoPath
+    }
+    copy {
+        from file("module.main/src/main/resources/icon.png")
+        into file("module.$id/src/main/resources/")
+    }
+
+    buildGradle.write(
+            """
+            dependencies {
+            }
+            """.stripIndent().trim()
+    )
+    gradleProperties.write(
+            """
+            ## Mod Properties
+            mod_id=$mod_id
+            mod_name=$mod_name
+            mod_description=
+            """.stripIndent().trim()
+    )
+    mainClass.write(
+            """
+            package com.qiushui1012.lib.$underlinedId;
+            
+            import net.minecraft.resources.Identifier;
+            import net.neoforged.fml.common.Mod;
+            
+            @Mod(${class_name}.MOD_ID)
+            public class $class_name {
+                public static final String MAIN_ID = "qualialib";
+                public static final String MOD_ID = "$mod_id";
+            
+                public static Identifier of(String path) {
+                    return Identifier.fromNamespaceAndPath(${class_name}.MAIN_ID, path);
+                }
+            }
+            """.stripIndent().trim()
+    )
+    packageInfo.write(
+            """
+            @NullMarked
+            package com.qiushui1012.lib.$underlinedId;
+            
+            import org.jspecify.annotations.NullMarked;
+            """.stripIndent().trim()
+    )
+    mixinConfig.write(
+            """
+            {
+              "required": true,
+              "minVersion": "0.8",
+              "package": "com.qiushui1012.lib.${underlinedId}.mixin",
+              "compatibilityLevel": "JAVA_8",
+              "refmap": "qualialib.refmap.json",
+              "mixins": [
+              ],
+              "client": [
+              ],
+              "injectors": {
+                "defaultRequire": 1
+              }
+            }
+            """.stripIndent().trim()
+    )
+}
+
+subprojects {
+    if (it.name == "renderdoc-loader-internal") return
+    apply plugin: 'java'
+    apply plugin: 'java-library'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+    apply plugin: 'maven-publish'
+    apply plugin: 'net.neoforged.moddev'
+    apply plugin: 'io.freefair.lombok'
+    apply plugin: 'org.jreleaser'
+    apply plugin: "me.modmuss50.mod-publish-plugin"
+
+    apply from: rootProject.file("module.gradle")
+    if (it.name != "qualia-test-neoforge-26.1") {
+        apply from: rootProject.file("gradle/scripts/roseau.gradle")
+        apply from: rootProject.file("gradle/scripts/toml.gradle")
+    }
+}

@@ -1,0 +1,224 @@
+String buildType = 'snapshot'
+String buildNumber
+if (System.getenv("CI_BUILD") == 'false') buildNumber = null else {
+    if (System.getenv("PR_BUILD") != 'false') buildType = 'pr'
+    buildNumber = System.getenv("GITHUB_RUN_NUMBER")
+}
+version = "${mod_version}" + (buildNumber != null ? "+${buildType}.${buildNumber}" : "")
+group = mod_group_id
+
+base {
+    archivesName = "${project.mod_id}-neoforge-${libs.versions.minecraft.get()}"
+}
+
+repositories {
+    // TODO: Find a maven to publish
+    // exclusiveContent {
+    //     forRepositories(
+    //         maven {
+    //             name = "None yet"
+    //             url = "None yet"
+    //         }
+    //     )
+    //     filter {
+    //         includeGroup "com.qiushui1012.lib"
+    //     }
+    // }
+    mavenLocal()
+    mavenCentral()
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(project.java_version)
+
+neoForge {
+    version = libs.versions.neoforge.get()
+
+    interfaceInjectionData { it1 ->
+        if (project.interface_injection == "true") {
+            it1.from 'src/main/resources/interface_injections.json'
+            it1.publish file('src/main/resources/interface_injections.json')
+        }
+    }
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        clientMSA {
+            client()
+            devLogin = true
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            clientData()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+tasks.named("processResources") {
+    var replaceProperties = [
+            minecraft_version       : libs.versions.minecraft.get(),
+            minecraft_version_range : minecraft_version_range,
+            neo_version             : libs.versions.neoforge.get(),
+            neo_version_range       : neo_version_range,
+            loader_version_range    : loader_version_range,
+            mod_id                  : mod_id,
+            mod_name                : mod_name,
+            mod_license             : mod_license,
+            mod_version             : version,
+            mod_authors             : mod_authors,
+            mod_description         : mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+
+    if (project.name != "qualialib-test-neoforge-26.1") {
+        finalizedBy 'changeModsToml'
+    }
+}
+
+tasks.register('sourcesJar', Jar) {
+    from delombok.outputs.files
+    dependsOn delombok
+    archiveClassifier = "sources"
+}
+
+javadoc {
+    options {
+        encoding = 'UTF-8'
+        addStringOption 'Xdoclint:none', '-quiet'
+        addStringOption 'tag', 'apiNote:a:API Note:'
+        addStringOption 'tag', 'implSpec:a:Implementation Requirement:'
+        addStringOption 'tag', 'implNote:a:Implementation Note:'
+    }
+}
+
+jar {
+    from(rootProject.file("LICENSE"))
+    from(rootProject.file("README.md"))
+    from(rootProject.file("README.en.md"))
+}
+
+artifacts {
+    archives tasks.jar
+    archives tasks.sourcesJar
+}
+
+def this_name = base.archivesName.get()
+def this_description = mod_description
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+
+            artifact sourcesJar
+
+            versionMapping {
+                allVariants {
+                    fromResolutionResult()
+                }
+            }
+
+            pom {
+                name = this_name
+                description = this_description
+                url = 'https://github.com/QiuShui1012/QualiaLib'
+
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/license/mit'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'qiushui1012'
+                        name = 'QiuShui1012'
+                        email = 'qiushui1012@foxmail.com'
+                    }
+                }
+                scm {
+                    url = 'https://github.com/QiuShui1012/QualiaLib'
+                    connection = 'https://github.com/QiuShui1012/QualiaLib.git'
+                    developerConnection = 'https://github.com/QiuShui1012/QualiaLib.git'
+                }
+            }
+        }
+    }
+    repositories {
+        // Add repositories to publish to here.
+        def MAVEN_URL = System.getenv("MAVEN_URL")
+        if (MAVEN_URL != null) {
+            maven {
+                url MAVEN_URL
+                credentials {
+                    username System.getenv("MAVEN_USERNAME")
+                    password System.getenv("MAVEN_PASSWORD")
+                }
+            }
+        }
+        mavenLocal()
+        maven {
+            name = "staging"
+            url = layout.buildDirectory.dir("staging-deploy")
+        }
+    }
+}
+
+jreleaser {
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('build/staging-deploy')
+                }
+            }
+        }
+    }
+}
+
+idea.module {
+    downloadSources = true
+    downloadJavadoc = true
+}
+
+lombok.version = libs.versions.lombok.get()

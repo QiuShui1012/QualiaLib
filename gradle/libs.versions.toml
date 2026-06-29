@@ -1,0 +1,12 @@
+[versions]
+minecraft = "26.1.2"
+neoforge = "26.1.2.76"
+
+lombok = "1.18.44"
+
+mdg = "2.0.140"
+lombokPlugin = "9.2.0"
+
+[plugins]
+mdg = { id = "net.neoforged.moddev", version.ref = "mdg" }
+lombok = { id = "io.freefair.lombok", version.ref = "lombokPlugin" }

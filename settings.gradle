@@ -1,0 +1,25 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        gradlePluginPortal()
+        maven { url = 'https://maven.neoforged.net/releases' }
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+def isDev = !System.getenv().containsKey("NOT_DEV") || System.getenv("NOT_ENV") == "false"
+
+include 'module.registry'
+include 'module.main'
+if (isDev) {
+    include 'module.test'
+}
+
+project(':module.registry').name = "qualialib-registry-neoforge-26.1"
+project(':module.main').name = "qualialib-neoforge-26.1"
+if (isDev) {
+    project(':module.test').name = "qualialib-test-neoforge-26.1"
+}

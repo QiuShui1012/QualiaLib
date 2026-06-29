@@ -1,0 +1,28 @@
+dependencies {
+    if (System.getenv("NOT_DEV") == 'true') {
+        jarJar(api "com.qiushui1012.lib:qualialib-registry-neoforge-26.1:latest.release")
+    } else {
+        jarJar(implementation project(":qualialib-registry-neoforge-26.1"))
+    }
+}
+
+publishMods {
+    file = jar.archiveFile
+    changelog = "Update something"
+    type = BETA
+    modLoaders.add("neoforge")
+
+    additionalFiles.from(sourcesJar.archiveFile)
+
+    curseforge {
+        accessToken = System.getenv("CURSEFORGE_TOKEN")
+        projectId = "" // TODO: Publish to CurseForge
+        minecraftVersions.add(libs.versions.minecraft.get())
+    }
+
+    modrinth {
+        accessToken = System.getenv("MODRINTH_TOKEN")
+        projectId = "" // TODO: Publish to Modrinth
+        minecraftVersions.add(libs.versions.minecraft.get())
+    }
+}
