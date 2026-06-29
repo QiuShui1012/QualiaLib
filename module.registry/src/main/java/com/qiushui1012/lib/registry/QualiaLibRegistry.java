@@ -7,6 +7,7 @@ import net.neoforged.fml.common.Mod;
 public class QualiaLibRegistry {
     public static final String MAIN_ID = "qualialib";
     public static final String MOD_ID = "qualialib_registry";
+    public static final String UNDEFINED = "==<undefined>==";
 
     public static Identifier of(String path) {
         return Identifier.fromNamespaceAndPath(QualiaLibRegistry.MAIN_ID, path);

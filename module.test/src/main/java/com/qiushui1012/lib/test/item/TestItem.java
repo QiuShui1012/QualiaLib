@@ -1,7 +1,9 @@
 package com.qiushui1012.lib.test.item;
 
-import com.qiushui1012.lib.registry.element.Item;
+import net.minecraft.world.item.Item;
 
-@Item
-public class TestItem {
+public class TestItem extends Item {
+    public TestItem(Properties properties) {
+        super(properties);
+    }
 }

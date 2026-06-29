@@ -10,11 +10,13 @@ import java.lang.annotation.Target;
 
 /// 定义目标 `ID`
 ///
-/// 配合 [`@Registry`][Registry] 使用时，用于标识目标元素注册时使用的 `ID`
+/// 在类上使用时，需配合 [`@Registry`][Registry] 使用，用于标识目标元素注册时使用的 `ID`
+///
+/// 在字段上使用时，需配合 [`@Registry`][Registry] 使用，用于标识目标元素注册时使用的 `ID`
 ///
 /// @see Registry
 @Documented
-@Target(ElementType.FIELD)
+@Target({ElementType.TYPE, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ID {
     /// `ID`，格式与 [Identifier] 相同

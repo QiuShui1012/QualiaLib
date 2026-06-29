@@ -10,10 +10,10 @@ import java.lang.annotation.Target;
 
 /// 定义目标注册表
 ///
-/// 当标注目标为类时，将目标类视作基本元素并注册一个新的注册表
+/// 在类上使用时，将目标类视作基本元素并注册一个新的注册表；
 ///
-/// 当标注目标为字段时，尝试读取 [`@ID`][ID] 注解中的值并注册到对应注册表；
-/// 否则将会报出 [`UnknownIDException`][com.qiushui1012.lib.registry.exception.UnknownIDException] 错误
+/// 在字段上使用时，尝试读取 [`@ID`][ID] 注解中的值并注册到对应注册表；
+/// 若 [`@ID`][ID] 不存在，则会尝试使用字段名作为 `ID`；
 ///
 /// @see ID
 @Documented
